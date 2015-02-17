@@ -1,0 +1,28 @@
+## Indices for space and time
+# I
+4
+
+# J
+9
+
+## Tag releases (rows are areas, columns are years)
+# r
+100 100 100 100
+
+## Matrix of recoveries by area
+# R
+0 29 14 22 21 25 16 23 22
+29 0 15 15 23 27 22 23 23
+32 25 0 20 10 21 22 28 23
+24 15 18 0 16 24 19 22 24
+
+
+## Matrix of area efforts
+# E
+
+## Matrix of area fished in each location
+# A
+
+## Data structure check integer
+# dum
+999

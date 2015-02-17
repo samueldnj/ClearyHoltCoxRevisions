@@ -1,0 +1,29 @@
+## Matrix of movement probabilities
+# logitTheta
+-2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3
+-2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3
+-2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3
+-2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3 -2.3
+
+## log Natural mortality
+# logM
+-2.52
+
+# log Fishing mortality
+# logFbar
+-1.61
+
+## Dirichlet parameters
+# alpha
+1 1 1 1 1 1 1 1 1
+
+## Multinomial jumping distribution parameter
+# d
+30
+
+## Vectors of area mortalities
+# Z
+0.28 0.28 0.28 0.28 0.28 0.28 0.28 0.28 0.28
+
+# F
+0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2

@@ -1,0 +1,219 @@
+\documentclass[12pt]{article}
+\usepackage[letterpaper]{geometry}
+\usepackage{amsmath,amsfonts,xcolor,natbib,setspace}
+\doublespace
+
+% New command for editing comments
+\newcommand{\sj}[1]{{\color{red}\mbox{}\marginpar{\raggedleft\hspace{0pt}*} #1}}
+
+% Commonly used characters
+\newcommand{\vJ}{\vec{J}}
+\newcommand{\vI}{\vec{I}}
+\newcommand{\cL}{\mathcal{L}}
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cM}{\mathcal{M}}
+\newcommand{\kP}{\mathfrak{P}}
+
+\begin{document}
+
+\section{The movement model}
+
+We present a spatially explicit movement model for sablefish based on the model of \citet{mcgarvey2002estimating}. The main difference between the model of \citet{mcgarvey2002estimating} and the model presented here is that ours is time-averaged over the length of the mark-recapture experiment, rather than using a discrete time step with all movement assumed to take place on the same day each year \sj{Should we check how their model works out?}. This class of model makes the assumption that natural mortality and the reporting rate of tags is spatially constant, however the latter assumption is reasonable given that the fisheries studied have 100\% at-sea observer programmes. Unlike the Peterson class of mark-recapture models, this class estimates movement rates as probabilities and not population abundance.
+
+\sj{This is very much a work in progress. I'm just trying to get the model in here, we can tidy up order later. I'm trying to move as much definition of terms to the table at the end, a la Schnute's model presentation technique.}
+
+\subsection{Data Structure}
+
+There are two main sources of data which are used in the model:
+\begin{enumerate}
+  \item $N = (n_{i,j})_{i,j}$, a matrix of tag recoveries indexed by release inlet $i$ and recovery area $j$;
+  \item $\bar{E}_j''$, a measure of average relative fishing effort for each recovery area $j$.
+\end{enumerate}
+
+\subsubsection{Tag recoveries}
+The PacSableTag database, maintained at the Pacific Biological Station in Nanaimo, British Columbia, contains tag release and recovery data from 1995 through to 2014 \sj{Confirm these dates, do we need a reference?}. These data were extracted for use in this model. \sj{I'm going to leave this for now, below I've listed things they restricted, and we should talk about whether or not to include them}
+  \begin{itemize}
+    \item excluded same year recoveries
+    \item multiple recoveries
+    \item restricted to only trap gear - to remove selectivity issues \sj{Can we account for this with a selectivity function?}
+    \item did not include survey recoveries (argued that these are negligible)
+    \item Only included survey tagged fish in inlets \sj{I think we talked about expanding this}
+  \end{itemize}
+
+We should include a table of tag recoveries, which I can make in R and export to latex.
+
+\subsubsection{Fishing Effort} \label{sec:effort}
+
+Fishing effort $E_{j,t}$ is defined as number of traps deployed \sj{Does soak time play a factor here? Should we include it in the effort metric?} in the offshore commercial trap fishery and inlet tagging surveys in each area and year. This is considered as a raw metric of fishing effort, and is time-averaged and normalised to produce the time-averaged relative fishing effort $\bar{E}_j''$ for each of the nine tag recovery areas. We use the following three steps to time average and normalise the raw effort $E_{j,t}$ over time and area fished.
+
+\begin{enumerate}
+  \item $E_{j,t}$ is the sum of the number of traps deployed in area $j$ in year $t$.
+
+  \item $A_{j,t}$ is the area fished in km$^2$, computed by applying a gear-fish attraction width to each fishing set. We assume that sablefish are attracted to the baited traps from $0.5$km in any direction, giving a diameter of $1.0$km. Movement probabilities estimated by our model are sensitive to the values for fishing effort so \sj{insert sensitivity analyses here} \citep{wyeth2006summary}. To normalise the fishing effort density take
+  \[
+    E_{j,t}' = \frac{E_{j,t}}{A_{j,t}}.
+  \]
+
+  \item Finally we time average the $E_{j,t}'$ over all the years to get
+  \[
+  \bar{E}_j' = \frac1T\sum_{t = 1}^T E_{j,t}',
+  \]
+  which is then averaged over all areas to get the relative average fishing effort
+  \[
+  \bar{E}_j'' = \frac{\bar{E}_j}{\sum_{j=1}^J \bar{E}_j'}
+  \]
+\end{enumerate}
+
+\subsection{Model Structure}
+
+We estimate the parameters $P_{i,j}$, which are defined as the probabilities of a fish tagged and released in inlet $i$ being recovered in, or moving to, area $j$. These probabilities are estimated by comparing the observed number of recaptures $n_{i,j}$ (Table \ref{tab:variables}) with the predicted probabilities of movement through a Bayesian posterior distribution function, as outlined in Section \ref{sec:Bayes}.
+
+We define $\hat{n}_{i,j}$ as the predicted number of fish recaptured in area $j$ that were tagged and released in area $i$ in Table \ref{tab:variables} as a function of the parameters $P_{i,j}$. When substituted into the function $\cR(j~|~i)$, given in Table \ref{tab:variables}, the releases term $R_i$ cancels and the function simplifies to
+\begin{equation}\label{eq:recProbs}
+\cR(j~|~i) = \frac{P_{i,j} \left(1 - \exp(-Z_j) \right)\frac{F_j}{Z_j}}{\sum_{j = 1}^J P_{i,j} \left(1 - \exp(-Z_j) \right)\frac{F_j}{Z_j}}.
+\end{equation}
+Equation \eqref{eq:recProbs} is a time-averaged version of equation (5) in \citet{mcgarvey2002estimating}, and all terms are defined in Table \ref{tab:variables}. The fishing mortality in each area is given as
+\begin{equation}
+F_j = \bar{F} \cdot \bar{E}_j'',
+\end{equation}
+with the time-averaged relative effort $\bar{E}_j''$ defined in Section \ref{sec:effort}.
+
+\subsection{Parameter Estimation}
+The parameter matrix $\Theta$ for our model satisfies the same assumptions as a Markovian transition matrix:
+\begin{itemize}
+  \item The entries are all probabilities, $P_{i,j} \in [0,1]$;
+  \item The sum of the entries in each row of $\Theta$ is equal to 1, $\sum_{j=1}^J P_{i,j} = 1$.
+\end{itemize}
+We estimate the distributions of the entries in $\Theta$ by using a Gibbs sampler to numerically integrate the Bayes posterior distribution
+\[
+\PP(\Theta ~|~ N) \propto \cP(\Theta) \cdot \cL(N~|~\Theta).
+\]
+\sj{I think we should mention somewhere that the posterior for each row has no bearing on the others, so we can compute them independently - well, I think I just said it but I haven't worded it correctly yet.}
+
+We use the Dirichlet distribution as a prior on each row of $\Theta$, as this incorporates the Markovian conditions on the entries. For a fixed $i$, we have the prior probability distribution function
+\begin{equation}
+\cP_i(\Theta_{i,\vJ}) = \frac{\Gamma(\alpha_1 + ... + \alpha_J)}{\Gamma(\alpha_1) \cdots\Gamma(\alpha_J)}\Theta_{i,1}^{\alpha_1 - 1} \cdots \Theta_{i,J}^{\alpha_J - 1}.
+\end{equation}
+The parameters of the dirichlet distribution are chosen as $\alpha_j = 1$ for all $j$, so that it collapses to a uniform distribution on the discrete space of recovery probabilities and is therefore fairly uninformative.
+
+The likelihood of observing the data $N$ given our hypothesis $\Theta$ is also computed for each tagging area (row). For this we use a multinomial distribution, which is appropriate when each recapture event is independent of the others \sj{This is a strong assumption, but I'm not sure what else to do about it}. The likelihood function for a fixed tagging area $i$ is the probability mass function of the multinomial distribtuion
+\begin{equation}
+\cL_i(N_{i,\vJ} ~|~ \Theta_{i,\vJ}) = \frac{\sum_{j = 1}^J n_{i,j}}{n_{i,1}!\cdots n_{i,j}!}\prod_{j=1}^J \cR(j~|~i)^{n_{i,j}}.
+\end{equation}
+
+The posterior for each tagging area is then given by
+\begin{equation}
+\PP_i(\Theta ~|~ N) = \cP_i(\Theta) \cdot \cL_i(N~|~\Theta),
+\end{equation}
+which is combined with the other, independendent \sj{?} tagging areas to give the posterior function
+\begin{equation}
+  \PP(\Theta ~|~ N) = \prod_{i = 1}^I \cP_i(\Theta) \cdot \cL_i(N~|~\Theta).
+\end{equation}
+The posterior distributions for the model parameters are then found by numerically integrating the posterior $\PP(\Theta ~|~ N)$, or equivalently, the log-posterior
+\begin{equation}
+\log \PP(\Theta ~|~ N) = \sum_{i = 1}^I \left( \log\cP_i(\Theta) + \log \cL_i(N~|~\Theta) \right).
+\end{equation}
+
+\section{A latex'ed version of the model used in the Cleary et al paper.}
+
+Let's build the Schnute style table of the model:
+
+\begin{table}[!h]
+\begin{center}
+\begin{tabular}{c | l}
+
+\hline
+Parameter & Description \\
+\hline
+$P_{i,j}$ & Probability that a fish tagged in inlet $i$ moves to area $j$, leading \\
+$\Theta$ & Parameter matrix of probabilities $(P_{i,j})_{i,j}$ \\
+$\bar{F}$ & Average fishing mortality over all areas (0.2) {\color{red}\it source?} \\
+$M$ & Natural mortality of sablefish (0.08, Kronlund et al, 2003) {\color{red}\it update?} \\
+$\alpha_j$ & Parameters of the Dirichlet prior distribution for the parameters $P_{i,j}$ ($\alpha_j = 1$) \\
+$d$ & Sample size of multinomial jumping distribution for MCMC integration of posterior distribution \\
+\hline
+\end{tabular}
+\caption{The parameters of the model.}\label{tab:parameters}
+\end{center}
+\end{table}
+
+
+
+
+\begin{table}[!h]
+\begin{center}
+\begin{tabular}{c | l}
+
+\hline
+Index & Description \\
+\hline
+$i$ & Inlet where fish were tagged and released \\
+$j$ & Area where tagged fish recovered \\
+$I$ & Total number of inlets (release sites), $I = 4$ \\
+$J$ & Total number of recovery sites (inlets and offshore fishing areas), $J = 9$ \\
+$\vI$ & Vector of release site indices $\vI = (1,2,...,I)$ \\
+$\vJ$ & Vector of recovery site indices $\vJ = (1,2,...,J)$ \\
+$k$ & Iteration of MCMC chain used in numerical integration of posterior distributions of parameters \\
+$t$ & Year \\
+$T$ & Total number of years ($T = 20$) \\
+\hline
+\end{tabular}
+\caption{Indices of variables in the movement model}\label{tab:indices}
+\end{center}
+\end{table}
+
+
+\sj{I'm playing with table formats below, this one didn't work out :P}
+
+\begin{table}[!h]
+\begin{center}
+\begin{tabular}{ p{15em} | p{25em}}
+
+\hline
+Variable & Description \\
+\hline
+$ n_{i,j} $ & Number of fish tagged in inlet $i$ and recovered in area $j$ over $T$ years \\
+$N = (n_{i,j})_{i,j}$ & Matrix of count data  \\
+$R_i$ & Number of fish tagged in inlet $i$ (cancels, so not needed) \\
+$E_{j,t}$ & Fishing effort (traps deployed) in area $j$ during year $t$ \\
+$A_{j,t}$ & Geographic coverage of area fished in $km^2$ \\
+$E_{j,t}' = \frac{E_{j,t}}{A_{j,t}}$ & Fishing effort scaled to area fished  \\
+$\bar{E_j}' = \frac1T\sum_{t = 1}^T E_{j,t}'$ & Average scaled fishing effort,  \\
+$\bar{E_j}'' = \frac{\bar{E}_j'}{\sum_{j}\bar{E}_j'}$ & Relative fishing effort for area $j$, averaged over area fished and $T$ years {\it \color{red} Choose better notation for these.} \\
+$ F_j = \bar{F} \cdot \bar{E}_j''$ & Fishing mortality in area $j$ \\
+$Z_j = F_j + M$ & Total mortality in area $j$\\
+$\hat{n}_{i,j} = P_{i,j} \left(1 - \exp(-Z_j) \right)\frac{F_j}{Z_j}R_i$ & Predicted number fish tagged in $i$ and recovered in $j$ \\
+$\cR(j~|~i) = \frac{\hat{n}_{i,j}}{\sum_j \hat{n}_{i,j}}$ & Predicted probability of recovering in area $j$ a fish tagged in area $i$ \\
+$Y_{i,\vJ,k}$ & Dummy candidate vector of release inlet $i$ of length $J$ for MCMC iteration $k$ \\
+$ P^*_{i,vJ,k} $ & Candidate vector of movement probabilities for release inlet $i$ of length $J$ for MCMC iteration $k$ \\
+
+\hline
+\end{tabular}
+\caption{Variables used in the specification of the movement model}\label{tab:variables}
+\end{center}
+\end{table}
+
+
+\begin{table}[!h]
+\begin{center}
+\begin{tabular}{c | c}
+\hline
+Function & Description \\
+\hline
+$\cL(N ~|~ \Theta )$ & Model likelihood pdf of data $N$ given the hypothesis $\Theta$ \\
+$\cP(\Theta)$ & Prior distribution pdf on the hypothesis $\Theta$ \\
+$\PP(\Theta ~|~ N)$ & Posterior distribution pdf of the hypothesis $\Theta$ given the data $N$ \\
+$\Gamma$ & Gamma function used in the Dirichlet distribution \\
+$\cM$ & Multinomial jumping distribution for MCMC integration \\
+\hline
+\end{tabular}
+\caption{Functions used in the movement model}\label{tab:functions}
+\end{center}
+\end{table}
+
+\bibliographystyle{apalike}
+\bibliography{/Users/samuelj/Dropbox/Library/library.bib}
+
+\end{document}
