@@ -12,10 +12,9 @@
 // 
 // There is code in here from an aborted attempt to introduce years at liberty
 // which will take longer than I have now. That's a job for a flowchart
-// and some equations.
-// Note that by setting T = 1 the model collapses
-// to a time averaged model, and t represents time at liberty rather than a
-// time step.
+// and some equations and psuedo-code.
+// Note that by setting T = 1 the model collapses to a time averaged model, 
+// and t represents time at liberty rather than a time step.
 // ----------------------------------------------------------------------------
 
 
@@ -33,7 +32,7 @@ DATA_SECTION
   LOC_CALCS
     if (dumm != 999)
     { // Break out if the check is not correct
-      cout<<"Error reading data.\n Fix it. \n dumm = " << dumm <<endl;
+      cout << "Error reading data.\n Fix it. \n dumm = " << dumm << endl;
       ad_exit(1);
     }
 
@@ -41,16 +40,17 @@ DATA_SECTION
 PARAMETER_SECTION
   // Estimated parameters-----------------------------------------------------
   init_matrix logitTheta(1,I,1,J);  // array of movement log probabilities
-  init_number logM(-1);               // log of natural mortality
-  init_number logFbar(-1);            // log of average fishing mortality
-  init_vector alpha(1,J,-1);         // Parameters of the Dirichlet prior
-  init_number d(-1);                  // Sample size for mn jumping distribution
-  init_vector Z(1,J,-1);             // Vector of area total mortalities
-  init_vector F(1,J,-1);             // Fishing mortality by area
+  init_number logM(-1);             // log of natural mortality
+  init_number logFbar(-1);          // log of average fishing mortality
+  init_vector alpha(1,J,-1);        // Parameters of the Dirichlet prior
+  init_number d(-1);                // Sample size for mn jumping distribution
+                                    // might be unnecessary
+  init_vector Z(1,J,-1);            // Vector of area total mortalities
+  init_vector F(1,J,-1);            // Fishing mortality by area
   //--------------------------------------------------------------------------
 
   // Derived Parameters-------------------------------------------------------
-  sdreport_matrix Theta(1,I,1,J);          // Movement probabilities
+  sdreport_matrix Theta(1,I,1,J); // Movement probabilities
   number M;                       // natural mortality
   number Fbar;                    // fishing mortality
   // vector F(1,J);                  // Fishing mortality by area
@@ -60,11 +60,10 @@ PARAMETER_SECTION
   //--------------------------------------------------------------------------  
   
   // Calculated pdfs----------------------------------------------------------
-  vector mnLogLike(1,I);     // multinomial likelihood of each release area
-  vector dirLogPrior(1,I);   // Dirichlet prior for each movement prob by rel area
-  vector logPostFun(1,I);    // posterior pdf by release area and YAL
-  //objective function value - what value to minimize?
-  objective_function_value nll;
+  vector mnLogLike(1,I);      // multinomial likelihood of each release area
+  vector dirLogPrior(1,I);    // Dirichlet prior for each mvment prob by rel area
+  vector logPostFun(1,I);     // posterior pdf by release area and YAL
+  objective_function_value f; // objective function value 
   //--------------------------------------------------------------------------
 
   // penalty variable---------------------------------------------------------
@@ -101,11 +100,11 @@ PROCEDURE_SECTION
   // Compute penalty for non-Markovian transition matrix Theta
   for (int i=1; i <= I; i++)
   {
-    pen[i] = pow(log(sum(Theta[i])),2.);
+    pen[i] = pow( log( sum( Theta[i] ) ), 2. );
   }
 
   // compute negative log likelihood of joint distribution of rows (inlets)
-  nll = -1.*sum(logPostFun)+1000*sum(pen);
+  f = -1. * sum ( logPostFun ) + 1000 * sum( pen );
 
 FUNCTION predRecoveries
   // Loop to predict the number of recoveries in area j from release area i
@@ -162,7 +161,7 @@ REPORT_SECTION
   report << logPostFun << "\n" << endl;
 
   report << "# PostValue" << endl;
-  report << nll << "\n" << endl;
+  report << f << "\n" << endl;
 
   report << "## Maximum Likelihood values" << endl;
   report << "# Theta" << endl;
